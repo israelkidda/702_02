@@ -41,7 +41,7 @@ print(textwrap.dedent("""\
         (person-years) counts by year and sex for the US since 1933. Using Excel (or another program of 
         your choosing; if you prefer to use another program, please include documentation of your programming), 
         construct abridged period life tables (follow the US female 2019 example discussed in class) by sex 
-        based on years 2020, 2019, and 1990 data. As in class, when choosing the naₓ values, use Coale-Demeny 
+        based on years 2020, 2019, and 1990 data. As in class, when choosing the ₙaₓ values (_n a _x), use Coale-Demeny 
         model values for very young ages and meaningful approximations (graduation, etc.) for other ages. 
         Based on your **six** constructed life tables, answer the following questions (in each case begin by 
         first stating the general expression involving the relevant life table functions (symbols) or 
