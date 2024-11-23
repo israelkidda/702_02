@@ -329,3 +329,287 @@ print("   - Socioeconomic differentials not captured in the data")
 print("   - Limited information on cause-specific mortality")
 
 print("\nAdditional analysis completed successfully")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Part 2: Liver Disease Mortality Analysis
+print("\nStarting Part 2: Liver Disease Mortality Analysis...")
+print("================================================")
+
+def load_liver_specific_data(file_path, start_row, end_row):
+    """Load and prepare liver disease-specific mortality data"""
+    print("\nLoading liver disease data from Excel...")  # Debug print
+    liver_codes = ['K70', 'K71', 'K72', 'K73', 'K74', 'K75', 'K76']
+    data = pd.read_excel(file_path)
+    egypt_2019_data = data.iloc[start_row-1:end_row]
+    
+    liver_disease_data = egypt_2019_data[egypt_2019_data['Cause'].str.startswith(tuple(liver_codes), na=False)]
+    print(f"Found {len(liver_disease_data)} liver disease records")  # Debug print
+    
+    females_liver = liver_disease_data[liver_disease_data['Sex'] == 1]
+    males_liver = liver_disease_data[liver_disease_data['Sex'] == 2]
+    
+    death_cols = [f'Deaths{i}' for i in range(1, 26)]
+    females_liver_ndx = females_liver[death_cols].sum().values
+    males_liver_ndx = males_liver[death_cols].sum().values
+    
+    print(f"Female liver disease deaths: {sum(females_liver_ndx)}")  # Debug print
+    print(f"Male liver disease deaths: {sum(males_liver_ndx)}")  # Debug print
+    
+    return females_liver_ndx, males_liver_ndx
+
+def construct_cause_deleted_life_table(all_cause_ndx, liver_ndx, initial_population=100000):
+    """
+    Construct cause-deleted life table using proper multiple decrement methodology
+    Based on the relationship: nqx = nqix + nq-ix - (nqix × nq-ix)
+    Where nqix is probability of dying from liver disease
+    and nq-ix is probability of dying from other causes
+    """
+    age_groups = ['0', '1-4'] + [f"{5*i}-{5*(i+1)-1}" for i in range(1, 18)] + ['95+']
+    
+    if len(all_cause_ndx) > len(age_groups):
+        all_cause_ndx = all_cause_ndx[:len(age_groups)]
+        liver_ndx = liver_ndx[:len(age_groups)]
+    
+    n = len(age_groups)
+    
+    # Initialize arrays
+    lx = np.zeros(n)
+    dx = np.zeros(n)
+    qx = np.zeros(n)
+    px = np.zeros(n)
+    Lx = np.zeros(n)
+    Tx = np.zeros(n)
+    ex = np.zeros(n)
+    
+    # Calculate probabilities for the cause-deleted life table
+    lx[0] = initial_population
+    
+    # Convert death counts to rates
+    mx_all = all_cause_ndx / initial_population
+    mx_liver = liver_ndx / initial_population
+    
+    # Convert rates to probabilities
+    qx_all = mx_all / (1 + 0.5 * mx_all)
+    qx_liver = mx_liver / (1 + 0.5 * mx_liver)
+    
+    # Calculate cause-deleted probabilities using the multiple decrement relationship
+    qx_other = (qx_all - qx_liver) / (1 - 0.5 * qx_liver)
+    
+    # Calculate life table
+    for i in range(n):
+        if i == 0:
+            lx[i] = initial_population
+        else:
+            lx[i] = lx[i-1] * (1 - qx_other[i-1])
+        
+        dx[i] = lx[i] * qx_other[i]
+        qx[i] = qx_other[i]
+        px[i] = 1 - qx[i]
+        
+        if i == 0:
+            Lx[i] = lx[i] - dx[i]/2
+        else:
+            Lx[i] = 5 * (lx[i] - dx[i]/2) if i < n-1 else lx[i] / 2
+    
+    # Calculate Tx and ex
+    for i in range(n-1, -1, -1):
+        Tx[i] = Lx[i] + (Tx[i+1] if i+1 < n else 0)
+        if lx[i] > 0:
+            ex[i] = Tx[i] / lx[i]
+    
+    return pd.DataFrame({
+        'Age Group': age_groups,
+        'lx': lx.round(2),
+        'dx': dx.round(2),
+        'qx': qx.round(4),
+        'px': px.round(4),
+        'Lx': Lx.round(2),
+        'Tx': Tx.round(2),
+        'ex': ex.round(2)
+    })
+
+def plot_comparative_functions(all_cause_table, cause_deleted_table, gender, save_plots=False):
+    """Create comparison plots for life table functions"""
+    age_groups = all_cause_table['Age Group'].values
+    x_positions = np.arange(len(age_groups))
+    
+    colors = {'All Causes': '#FF6B6B', 'Without Liver Disease': '#4ECDC4'}
+    
+    # Figure 1: Survival Probabilities (px)
+    plt.figure(figsize=(12, 8))
+    plt.plot(x_positions, all_cause_table['px'], label='All Causes', color=colors['All Causes'])
+    plt.plot(x_positions, cause_deleted_table['px'], label='Without Liver Disease', 
+             color=colors['Without Liver Disease'], linestyle='--')
+    plt.title(f'Probability of Surviving (px) - Egypt 2019 {gender}')
+    plt.xlabel('Age Group')
+    plt.ylabel('Probability')
+    plt.xticks(x_positions[::2], age_groups[::2], rotation=45)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    if save_plots:
+        plt.savefig(f'survival_prob_{gender.lower()}.png')
+    plt.show()
+    
+    # Figure 2: Death Probabilities (qx)
+    plt.figure(figsize=(12, 8))
+    plt.plot(x_positions, all_cause_table['qx'], label='All Causes', color=colors['All Causes'])
+    plt.plot(x_positions, cause_deleted_table['qx'], label='Without Liver Disease',
+             color=colors['Without Liver Disease'], linestyle='--')
+    plt.title(f'Probability of Dying (qx) - Egypt 2019 {gender}')
+    plt.xlabel('Age Group')
+    plt.ylabel('Probability')
+    plt.xticks(x_positions[::2], age_groups[::2], rotation=45)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    if save_plots:
+        plt.savefig(f'death_prob_{gender.lower()}.png')
+    plt.show()
+    
+    # Figure 3: Life Expectancy (ex)
+    plt.figure(figsize=(12, 8))
+    plt.plot(x_positions, all_cause_table['ex'], label='All Causes', color=colors['All Causes'])
+    plt.plot(x_positions, cause_deleted_table['ex'], label='Without Liver Disease',
+             color=colors['Without Liver Disease'], linestyle='--')
+    plt.title(f'Life Expectancy (ex) - Egypt 2019 {gender}')
+    plt.xlabel('Age Group')
+    plt.ylabel('Years')
+    plt.xticks(x_positions[::2], age_groups[::2], rotation=45)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    if save_plots:
+        plt.savefig(f'life_expectancy_{gender.lower()}.png')
+    plt.show()
+
+def analyze_mortality_patterns(all_cause_table, cause_deleted_table, gender):
+    """Analyze and print detailed mortality pattern comparisons"""
+    print(f"\nMortality Pattern Analysis for {gender}")
+    print("=" * 50)
+    
+    # Life expectancy at birth comparison
+    e0_all = all_cause_table['ex'].iloc[0]
+    e0_no_liver = cause_deleted_table['ex'].iloc[0]
+    e0_diff = e0_no_liver - e0_all
+    
+    print(f"\n1. Life Expectancy at Birth:")
+    print(f"   - With all causes: {e0_all:.1f} years")
+    print(f"   - Without liver disease: {e0_no_liver:.1f} years")
+    print(f"   - Gain in life expectancy: {e0_diff:.1f} years")
+    
+    # Survival probabilities at key ages
+    key_ages = [15, 30, 45, 60, 75]
+    print("\n2. Survival Probabilities at Key Ages:")
+    for age in key_ages:
+        idx = all_cause_table[all_cause_table['Age Group'].str.startswith(str(age))].index[0]
+        surv_all = all_cause_table['lx'].iloc[idx] / 100000
+        surv_no_liver = cause_deleted_table['lx'].iloc[idx] / 100000
+        diff = (surv_no_liver - surv_all) * 100
+        
+        print(f"\n   Age {age}:")
+        print(f"   - All causes: {surv_all:.3%}")
+        print(f"   - Without liver disease: {surv_no_liver:.3%}")
+        print(f"   - Improvement: {diff:.1f} percentage points")
+    
+    # Maximum mortality difference
+    qx_diff = abs(all_cause_table['qx'] - cause_deleted_table['qx'])
+    max_diff_idx = qx_diff.idxmax()
+    max_diff_age = all_cause_table['Age Group'].iloc[max_diff_idx]
+    
+    print("\n3. Maximum Mortality Difference:")
+    print(f"   - Age group: {max_diff_age}")
+    print(f"   - All causes qx: {all_cause_table['qx'].iloc[max_diff_idx]:.4f}")
+    print(f"   - Without liver disease qx: {cause_deleted_table['qx'].iloc[max_diff_idx]:.4f}")
+    print(f"   - Absolute difference: {qx_diff.max():.4f}")
+
+# Execute Part 2 analysis
+if __name__ == "__main__":
+    try:
+        print("\nLoading liver disease-specific data...")
+        females_liver_ndx, males_liver_ndx = load_liver_specific_data(file_path, start_row, end_row)
+        
+        print("\nConstructing cause-deleted life tables...")
+        females_no_liver_table = construct_cause_deleted_life_table(females_ndx, females_liver_ndx)
+        males_no_liver_table = construct_cause_deleted_life_table(males_ndx, males_liver_ndx)
+        
+        print("\nGenerating comparative plots...")
+        plot_comparative_functions(females_table, females_no_liver_table, "Females")
+        plot_comparative_functions(males_table, males_no_liver_table, "Males")
+        
+        print("\nAnalyzing mortality patterns...")
+        analyze_mortality_patterns(females_table, females_no_liver_table, "Females")
+        analyze_mortality_patterns(males_table, males_no_liver_table, "Males")
+        
+        print("\nPart 2 analysis completed successfully")
+        
+    except Exception as e:
+        print(f"An error occurred in Part 2: {str(e)}")
+        import traceback
+        traceback.print_exc()
