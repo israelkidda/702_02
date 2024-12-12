@@ -92,3 +92,179 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+print()
+print()
+print()
+print()
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Path to cleaned data (provided by the user)
+cleaned_data_path = '/Users/israelmarykidda/Documents/MAMES/MAMES 3 Fall 2024/DCP 702 Methods of Demographic Analysis/major homeworks/04 dec 18/Stable Population Theory, Applications/cleaned_data.csv'
+
+# Load the dataset
+df = pd.read_csv(cleaned_data_path)
+
+# Inspect the first few rows to locate fertility and mortality rate columns
+print("Columns in the dataset:")
+print(df.columns)
+
+# Sample fertility rates to ensure we're getting the correct data
+print("Sample fertility rates:")
+print(df['fertility rates by calendar year and age (Lexis squares, age in completed years (ACY))'].head())
+
+# Extract fertility and mortality rates for the year 2016
+# Assuming 'Period' column contains the year and 'fertility rates by calendar year and age (Lexis squares, age in completed years (ACY))' has the fertility rates
+# Also assuming the mortality rate column is similarly structured
+
+# Get the data for 2016 (filter by 'Period' == 2016)
+df_2016 = df[df['Period'] == 2016]
+
+# Extract necessary columns (replace with actual column names based on your data inspection)
+fertility_column = 'fertility rates by calendar year and age (Lexis squares, age in completed years (ACY))'
+mortality_column = '1qx'  # Update this with the correct mortality column name
+
+# Calculate the stable population (simplified model)
+def calculate_stable_population(fertility, mortality, age_groups):
+    # Initialize population vectors (simplified, assuming initial equal distribution)
+    population = np.ones(len(age_groups))
+    
+    # Apply fertility and mortality rates to estimate long-term stable population structure
+    for i in range(1, len(age_groups)):
+        population[i] = population[i-1] * (1 - mortality[i-1]) * fertility[i-1]
+    
+    return population / population.sum()  # Normalize to sum to 1 (stable structure)
+
+# Apply the stable population function to the 2016 data
+age_groups = df_2016['Age']  # Replace with the actual column for age groups
+fertility_rates = df_2016[fertility_column].values
+mortality_rates = df_2016[mortality_column].values
+
+stable_population_2016 = calculate_stable_population(fertility_rates, mortality_rates, age_groups)
+
+# If fertility increases by 25%, calculate the new stable population
+fertility_rates_increased = fertility_rates * 1.25
+stable_population_increased_fertility = calculate_stable_population(fertility_rates_increased, mortality_rates, age_groups)
+
+# If mortality decreases by 50%, calculate the new stable population
+mortality_rates_decreased = mortality_rates * 0.5
+stable_population_decreased_mortality = calculate_stable_population(fertility_rates, mortality_rates_decreased, age_groups)
+
+# Plot the results
+plt.figure(figsize=(10, 6))
+plt.plot(age_groups, stable_population_2016, label='2016 Baseline', color='blue')
+plt.plot(age_groups, stable_population_increased_fertility, label='Increased Fertility (25%)', color='green')
+plt.plot(age_groups, stable_population_decreased_mortality, label='Decreased Mortality (50%)', color='red')
+
+plt.xlabel('Age Groups')
+plt.ylabel('Proportion of Population')
+plt.title('Stable Population Age Structure for Japan (2016, Increased Fertility, Decreased Mortality)')
+plt.legend()
+plt.grid(True)
+plt.show()
+

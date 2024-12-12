@@ -1,51 +1,10 @@
-import pandas as pd
-import os
+asfr_values = [
+    0.00001, 0.00007, 0.00025, 0.00099, 0.00246, 0.00495, 0.0103, 0.01577, 
+    0.02233, 0.02806, 0.03412, 0.04294, 0.05446, 0.06834, 0.08436, 0.09672, 
+    0.10688, 0.10942, 0.10869, 0.10541, 0.09784, 0.09035, 0.08026, 0.06969, 
+    0.05705, 0.04581, 0.03503, 0.02487, 0.01625, 0.00952, 0.00514, 0.00235, 
+    0.0009, 0.00033, 0.00014, 0.00006, 0.00004, 0.00003, 0.00001, 0.00001
+]
 
-# File path to the HW4 Japan Excel file
-file_path = '/Users/israelmarykidda/Documents/MAMES/MAMES 3 Fall 2024/DCP 702 Methods of Demographic Analysis/major homeworks/04 dec 18/Stable Population Theory, Applications, HW4 Japan.xlsx'
-
-# Load the sheet without assuming headers
-sheet_name = 'HW4 Japan'  # You might need to adjust this sheet name based on the actual one in the file
-raw_data = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
-
-# Display the first few rows to understand the structure of the data
-print("\nInitial Inspection of Raw Data:")
-print(raw_data.head(20))
-
-# Step 1: Automatically detect the header row
-def detect_header_row(data):
-    potential_headers = data.apply(lambda row: row.astype(str).str.match(r"[a-zA-Z]").any(), axis=1)
-    header_candidates = data[potential_headers]
-    most_unique_values = header_candidates.apply(lambda row: row.nunique(), axis=1)
-    header_row_index = most_unique_values.idxmax()
-    return header_row_index
-
-header_row_index = detect_header_row(raw_data)
-print(f"\nDetected Header Row Index: {header_row_index}")
-
-# Step 2: Use the detected row as the header
-data = pd.read_excel(file_path, sheet_name=sheet_name, header=header_row_index)
-
-# Step 3: Clean column names
-data.columns = data.columns.astype(str).str.strip()  # Strip any extra spaces from column names
-data = data.loc[:, ~data.columns.duplicated()]  # Remove duplicate columns
-
-# Step 4: Extract relevant columns (you'll need to update this based on the actual structure)
-columns_of_interest = ['a', '1qx', 'fertility_rate', 'other_columns_if_needed']
-missing_columns = [col for col in columns_of_interest if col not in data.columns]
-if missing_columns:
-    print(f"\nError: Missing expected columns: {missing_columns}")
-    print(f"Available columns: {list(data.columns)}")
-    exit(1)
-
-data_cleaned = data[columns_of_interest]
-print("\nExtracted Relevant Data:")
-print(data_cleaned.head())
-
-# Step 5: Save the cleaned data to a new CSV file for later use in main.py
-output_dir = '/Users/israelmarykidda/Documents/MAMES/MAMES 3 Fall 2024/DCP 702 Methods of Demographic Analysis/major homeworks/04 dec 18/Stable Population Theory, Applications'
-output_file = os.path.join(output_dir, 'cleaned_HW4_Japan.csv')
-os.makedirs(output_dir, exist_ok=True)
-data_cleaned.to_csv(output_file, index=False)
-
-print(f"\nCleaned data saved to: {output_file}")
+tfr = sum(asfr_values)
+print(f"The Total Fertility Rate (TFR) is: {tfr}")
