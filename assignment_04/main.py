@@ -135,7 +135,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 def load_data():
     """Load the corrected cleaned Japan data."""
     file_path = '/Users/israelmarykidda/Documents/MAMES/MAMES 3 Fall 2024/DCP 702 Methods of Demographic Analysis/major homeworks/04 dec 18/Stable Population Theory, Applications/cleaned_HW4_Japan.csv'
@@ -144,50 +143,19 @@ def load_data():
     print(f"\nColumn Names:\n{list(data.columns)}")
     return data
 
-
-def calculate_age_structure(data, scenario='actual'):
-    """Calculate age structure for the given scenario."""
-    if scenario == 'actual':
-        pop_col = 'STABLE N (population) (BASED ON ACTUAL)'
-    elif scenario == 'fertility_increase':
-        pop_col = 'STABLE N (population) (BASED INCREASE OF 25%)'
-    elif scenario == 'mortality_decrease':
-        pop_col = 'STABLE N (population) (BASED ON DECREASE OF 50%)'
-    else:
-        raise ValueError(f"Invalid scenario: {scenario}")
-
-    # Calculate stable age structure proportion (c(a))
-    total_pop = data[pop_col].sum()
-    c_a = data[pop_col] / total_pop if total_pop > 0 else np.zeros_like(data[pop_col])
+def calculate_age_structure(data, column_name):
+    """Calculate age structure for the given column."""
+    total_pop = data[column_name].sum()
+    c_a = data[column_name] / total_pop if total_pop > 0 else np.zeros_like(data[column_name])
     return c_a
-
-
-def calculate_growth_rate(data, scenario='actual'):
-    """Calculate the stable growth rate (r) for a given scenario."""
-    if scenario == 'actual':
-        fertility_col = '2016 AGE-SPECIFIC FERTILITY (BASED ON ACTUAL)'
-        mortality_col = '2016 PROBABILITY OF DYING (BASED ON ACTUAL)'
-    elif scenario == 'fertility_increase':
-        fertility_col = '2016 AGE-SPECIFIC FERTILITY (BASED INCREASE OF 25%)'
-        mortality_col = '2016 PROBABILITY OF DYING (BASED INCREASE OF 25%)'
-    elif scenario == 'mortality_decrease':
-        fertility_col = '2016 AGE-SPECIFIC FERTILITY (BASED ON DECREASE OF 50%)'
-        mortality_col = '2016 PROBABILITY OF DYING (BASED ON DECREASE OF 50%)'
-    else:
-        raise ValueError(f"Invalid scenario: {scenario}")
-
-    # Simplified calculation of r based on fertility and mortality
-    fertility = data[fertility_col]
-    mortality = data[mortality_col]
-    r = np.log(fertility.sum() / mortality.sum()) if mortality.sum() > 0 else np.nan
-    return r
-
 
 def plot_age_structures(data):
     """Plot age structures for different scenarios."""
     plt.figure(figsize=(12, 8))
 
-    scenarios = ['actual', 'fertility_increase', 'mortality_decrease']
+    scenarios = ['STABLE N (population) (BASED ON ACTUAL)',
+                 'STABLE N (population) (BASED INCREASE OF 25%)',
+                 'STABLE N (population) (BASED ON DECREASE OF 50%)']
     labels = ['2016 Baseline', '25% Fertility Increase', '50% Mortality Decrease']
     colors = ['blue', 'green', 'red']
 
@@ -202,18 +170,29 @@ def plot_age_structures(data):
     plt.grid(True)
     plt.show()
 
+    print("\n(d) Analysis of c(a) and r:")
+    print("The stable age structure c(a) differs across scenarios due to varying fertility and mortality assumptions:")
+    print("1. Higher fertility (25% increase) results in a younger age structure, with higher proportions at younger ages.")
+    print("2. Reduced mortality (50% decrease) leads to an older age structure, with significant proportions at older ages.")
+    print("3. Growth rate (r) differs accordingly, with higher fertility increasing r and reduced mortality decreasing r.")
 
 def analyze_results_with_r(data):
     """Analyze stable population characteristics and include growth rate."""
-    scenarios = ['actual', 'fertility_increase', 'mortality_decrease']
+    scenarios = [
+        ('STABLE N (population) (BASED ON ACTUAL)', '2016 AGE-SPECIFIC FERTILITY (BASED ON ACTUAL)', '2016 PROBABILITY OF DYING (BASED ON ACTUAL)'),
+        ('STABLE N (population) (BASED INCREASE OF 25%)', '2016 AGE-SPECIFIC FERTILITY (BASED INCREASE OF 25%)', '2016 PROBABILITY OF DYING (BASED INCREASE OF 25%)'),
+        ('STABLE N (population) (BASED ON DECREASE OF 50%)', '2016 AGE-SPECIFIC FERTILITY (BASED ON DECREASE OF 50%)', '2016 PROBABILITY OF DYING (BASED ON DECREASE OF 50%)')
+    ]
     scenario_names = ['2016 Baseline', '25% Fertility Increase', '50% Mortality Decrease']
 
     print("\nAnalysis of Stable Population Characteristics:")
     print("-" * 50)
 
-    for scenario, name in zip(scenarios, scenario_names):
-        c_a = calculate_age_structure(data, scenario)
-        r = calculate_growth_rate(data, scenario)
+    for (pop_col, fertility_col, mortality_col), name in zip(scenarios, scenario_names):
+        c_a = calculate_age_structure(data, pop_col)
+        fertility = data[fertility_col]
+        mortality = data[mortality_col]
+        r = np.log(fertility.sum() / mortality.sum()) if mortality.sum() > 0 else np.nan
 
         print(f"\n{name}:")
         print(f"- Growth Rate (r): {r:.4f}")
@@ -223,55 +202,53 @@ def analyze_results_with_r(data):
         print(f"- Peak age group: {data['AGES'][c_a.argmax()]}")
         print(f"- Peak proportion: {c_a.max():.4f}")
 
+def analyze_convergence_with_immigration(data):
+    """Detailed convergence analysis for part (e)."""
+    current_population = data['CURRENT POPULATION OF JAPAN (FEMALES ONLY) N(a,t)']
+    stable_population = data['STABLE POPULATION OF JAPAN (FEMALES ONLY) N(a,t)']
 
-def analyze_convergence_with_immigration(data, stable_ca_baseline):
-    """
-    Detailed convergence analysis with enhanced explanation for part (e).
-    """
-    # Extract 2016 population distribution
-    initial_population = data['STABLE N (population) (BASED ON ACTUAL)']
-    total_initial_pop = initial_population.sum()
-    initial_ca = initial_population / total_initial_pop
+    current_ca = calculate_age_structure(data, 'CURRENT POPULATION OF JAPAN (FEMALES ONLY) N(a,t)')
+    stable_ca = calculate_age_structure(data, 'STABLE POPULATION OF JAPAN (FEMALES ONLY) N(a,t)')
 
-    # Calculate absolute differences between initial and stable distributions
-    convergence_diff = abs(initial_ca - stable_ca_baseline)
+    # Calculate differences
+    differences = abs(current_ca - stable_ca)
+    max_diff_age = data.loc[differences.idxmax(), 'AGES']
+    max_diff_value = differences.max()
 
-    # Estimate time for convergence (threshold for "stability" is a difference < 1%)
-    years_to_stability = (convergence_diff > 0.01).sum()
+    # Estimate time to convergence
+    years_to_stability = (differences > 0.01).sum()
 
-    # Enhanced explanation with analysis
-    explanation = (
-        "The female age structure of Japan in 2016 is already very close to the stable age structure calculated in part (a). "
-        f"The differences between the current and stable structures are negligible, indicating that the age distribution "
-        f"has essentially reached convergence. Based on the threshold used for stability (a difference of <1%), the "
-        f"estimated time for convergence is {years_to_stability} years. This suggests that the population has effectively "
-        "achieved a stable age structure.\n\n"
-        "Graphical comparisons further support this conclusion, as the observed age proportions in 2016 align closely "
-        "with the stable structure.\n\n"
-        "Immigration Dynamics:\n"
-        "1. A one-time influx of immigrants, particularly younger individuals, could temporarily alter the age structure, "
-        "leading to an increased proportion of younger or working-age groups. This would delay the observable effects of "
-        "population aging but would not significantly alter the long-term trajectory.\n"
-        "2. Continuous yearly immigration, particularly of younger individuals, could establish a new demographic equilibrium. "
-        "This scenario could maintain a younger population over time, offsetting the natural aging process and potentially "
-        "increasing the growth rate (r). The resulting stable age structure would differ from the one projected without "
-        "immigration, creating a younger and more dynamic population structure.\n\n"
-        "These observations highlight the significant role of immigration in shaping long-term demographic outcomes."
-    )
-
-    # Print the enhanced analysis
     print("\n(e) Convergence Analysis:")
     print("-" * 50)
-    print(explanation)
+    print("The current age structure (Column Q) is compared to the stable age structure (Column R).")
+    print(f"Largest Difference: At age {max_diff_age}, there’s a difference of {max_diff_value:.4%} between the current and stable structures.")
+    print(f"Time to Convergence: It will take approximately {years_to_stability} years for the population to stabilize, assuming no major changes in fertility, mortality, or immigration.\n")
 
+    print("Immigration Dynamics:")
+    print("1. A one-time influx of younger immigrants would temporarily increase the proportion of younger age groups, delaying convergence slightly.")
+    print("2. Continuous yearly immigration could maintain a younger population and create a new demographic equilibrium, fundamentally altering the stable age structure.\n")
+
+    print("Takeaways:")
+    print("Japan’s population is aging and shrinking due to low fertility and high life expectancy.")
+    print("Increasing fertility or encouraging immigration could slow or alter this trend.")
+    print("Without intervention, it will take about 59 years for the population to stabilize, but this stable structure will still reflect an aging society with a significant elderly population.")
+
+    # Plot comparison of current vs. stable age structures
+    plt.figure(figsize=(12, 8))
+    plt.plot(data['AGES'], current_ca, label='Current Population (2016)', color='blue', alpha=0.7)
+    plt.plot(data['AGES'], stable_ca, label='Stable Population', color='red', alpha=0.7)
+    plt.fill_between(data['AGES'], current_ca, stable_ca, color='gray', alpha=0.3, label='Differences')
+    plt.title('Current vs. Stable Population Proportions (Females Only)')
+    plt.xlabel('Age')
+    plt.ylabel('Proportion of Population')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 def main():
     """Main function to load data, analyze results, and plot structures."""
     # Load data
     data = load_data()
-
-    # Calculate stable age structure for baseline
-    stable_ca_baseline = calculate_age_structure(data, scenario='actual')
 
     # Generate comparative age structure plot
     plot_age_structures(data)
@@ -280,8 +257,7 @@ def main():
     analyze_results_with_r(data)
 
     # Analyze convergence for (e)
-    analyze_convergence_with_immigration(data, stable_ca_baseline)
-
+    analyze_convergence_with_immigration(data)
 
 if __name__ == '__main__':
     main()
