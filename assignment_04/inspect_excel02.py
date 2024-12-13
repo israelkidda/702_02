@@ -1,10 +1,45 @@
-asfr_values = [
-    0.00001, 0.00007, 0.00025, 0.00099, 0.00246, 0.00495, 0.0103, 0.01577, 
-    0.02233, 0.02806, 0.03412, 0.04294, 0.05446, 0.06834, 0.08436, 0.09672, 
-    0.10688, 0.10942, 0.10869, 0.10541, 0.09784, 0.09035, 0.08026, 0.06969, 
-    0.05705, 0.04581, 0.03503, 0.02487, 0.01625, 0.00952, 0.00514, 0.00235, 
-    0.0009, 0.00033, 0.00014, 0.00006, 0.00004, 0.00003, 0.00001, 0.00001
-]
+import pandas as pd
 
-tfr = sum(asfr_values)
-print(f"The Total Fertility Rate (TFR) is: {tfr}")
+# File path for the Excel document
+file_path = '/Users/israelmarykidda/Documents/MAMES/MAMES 3 Fall 2024/DCP 702 Methods of Demographic Analysis/major homeworks/04 dec 18/_MY PROBELM TWO DATA.xlsx'
+
+# Function to inspect and clean the Excel file
+def inspect_and_clean_excel(file_path):
+    try:
+        # Load the data assuming the first row contains column names
+        data = pd.read_excel(file_path, sheet_name='Sheet1')
+
+        # Print the first few rows
+        print("\nFirst 5 Rows of Data:")
+        print(data.head())
+
+        # Print column names
+        print("\nColumn Names:")
+        print(list(data.columns))
+
+        # Convert numeric columns to appropriate data types
+        data_cleaned = data.copy()
+        for col in data_cleaned.columns:
+            try:
+                data_cleaned[col] = pd.to_numeric(data_cleaned[col], errors='coerce')
+            except Exception as e:
+                print(f"Error converting column {col}: {e}")
+
+        # Print data types
+        print("\nData Types After Conversion:")
+        print(data_cleaned.dtypes)
+
+        # Print summary statistics
+        print("\nSummary Statistics:")
+        print(data_cleaned.describe(include='all'))
+
+        # Save cleaned data to a new CSV file for further analysis
+        cleaned_file_path = '/Users/israelmarykidda/Documents/MAMES/MAMES 3 Fall 2024/DCP 702 Methods of Demographic Analysis/major homeworks/04 dec 18/Stable Population Theory, Applications/cleaned_HW4_Japan.csv'
+        data_cleaned.to_csv(cleaned_file_path, index=False)
+        print(f"\nCleaned data saved to: {cleaned_file_path}")
+
+    except Exception as e:
+        print(f"An error occurred while inspecting the file: {e}")
+
+# Run the inspection and cleaning process
+inspect_and_clean_excel(file_path)
